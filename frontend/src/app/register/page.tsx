@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ui/Toast';
@@ -9,7 +9,6 @@ import { User, Mail, Lock, Eye, EyeOff, Gift, Loader2 } from 'lucide-react';
 
 export default function RegisterPage() {
     const router = useRouter();
-    const searchParams = useSearchParams();
     const { register } = useAuth();
     const { showToast } = useToast();
 
@@ -17,14 +16,23 @@ export default function RegisterPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [referralCode, setReferralCode] = useState(searchParams.get('ref') || '');
+    const [referralCode, setReferralCode] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     const [showVerificationMessage, setShowVerificationMessage] = useState(false);
     const [registeredEmail, setRegisteredEmail] = useState('');
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    // ✅ Get referral code from URL safely
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const ref = params.get('ref');
+            if (ref) setReferralCode(ref.toUpperCase());
+        }
+    }, []);
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (!username || !email || !password) {
@@ -48,23 +56,20 @@ export default function RegisterPage() {
             const result = await register(email, username, password, referralCode || undefined);
 
             if (result.requiresVerification) {
-                // Email verification required - show message
                 setRegisteredEmail(email);
                 setShowVerificationMessage(true);
                 showToast('Please check your email to verify your account!', 'success');
             } else {
-                // Auto-logged in (no SMTP configured)
                 showToast('Account created! Welcome!', 'success');
                 router.push('/');
             }
-        } catch (error: any) {
+        } catch (error) {
             showToast(error.message || 'Registration failed', 'error');
         } finally {
             setIsLoading(false);
         }
     };
 
-    // Show email verification message
     if (showVerificationMessage) {
         return (
             <div className="mobile-container min-h-screen flex items-center justify-center p-4">
@@ -108,6 +113,7 @@ export default function RegisterPage() {
             {/* Form Card */}
             <div className="flex-1 -mt-8 bg-[var(--background)] rounded-t-3xl p-6">
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* Username */}
                     <div>
                         <label className="block text-sm font-medium mb-2">Username</label>
                         <div className="relative">
@@ -124,6 +130,7 @@ export default function RegisterPage() {
                         </div>
                     </div>
 
+                    {/* Email */}
                     <div>
                         <label className="block text-sm font-medium mb-2">Email</label>
                         <div className="relative">
@@ -140,6 +147,7 @@ export default function RegisterPage() {
                         </div>
                     </div>
 
+                    {/* Password */}
                     <div>
                         <label className="block text-sm font-medium mb-2">Password</label>
                         <div className="relative">
@@ -163,6 +171,7 @@ export default function RegisterPage() {
                         </div>
                     </div>
 
+                    {/* Confirm Password */}
                     <div>
                         <label className="block text-sm font-medium mb-2">Confirm Password</label>
                         <div className="relative">
@@ -179,6 +188,7 @@ export default function RegisterPage() {
                         </div>
                     </div>
 
+                    {/* Referral Code */}
                     <div>
                         <label className="block text-sm font-medium mb-2">
                             Referral Code <span className="text-[var(--muted)]">(Optional)</span>
