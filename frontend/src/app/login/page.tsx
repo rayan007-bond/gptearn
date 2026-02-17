@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ui/Toast';
@@ -9,7 +9,6 @@ import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
     const router = useRouter();
-    const searchParams = useSearchParams();
     const { login } = useAuth();
     const { showToast } = useToast();
 
@@ -32,8 +31,15 @@ export default function LoginPage() {
             await login(email, password);
             showToast('Welcome back!', 'success');
 
-            const redirect = searchParams.get('redirect') || '/';
-            router.push(redirect);
+           let redirect = '/';
+
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            redirect = params.get('redirect') || '/';
+        }
+        
+        router.push(redirect);
+
         } catch (error: any) {
             showToast(error.message || 'Login failed', 'error');
         } finally {
