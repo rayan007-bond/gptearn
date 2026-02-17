@@ -32,7 +32,7 @@ export default function RegisterPage() {
         }
     }, []);
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         if (!username || !email || !password) {
@@ -63,7 +63,7 @@ export default function RegisterPage() {
                 showToast('Account created! Welcome!', 'success');
                 router.push('/');
             }
-        } catch (error) {
+        } catch (error: any) {
             showToast(error.message || 'Registration failed', 'error');
         } finally {
             setIsLoading(false);
@@ -78,24 +78,17 @@ export default function RegisterPage() {
                         <Mail className="text-[var(--primary)]" size={40} />
                     </div>
                     <h1 className="text-2xl font-bold mb-2">Check Your Email!</h1>
-                    <p className="text-[var(--muted)] mb-4">
-                        We've sent a verification link to:
-                    </p>
+                    <p className="text-[var(--muted)] mb-4">We've sent a verification link to:</p>
                     <p className="font-semibold text-[var(--primary)] mb-6">{registeredEmail}</p>
                     <p className="text-sm text-[var(--muted)] mb-6">
                         Click the link in the email to verify your account and start earning!
                     </p>
-                    <div className="space-y-3">
-                        <button
-                            onClick={() => router.push('/login')}
-                            className="btn gradient-primary text-white font-semibold px-8 py-3 rounded-xl w-full"
-                        >
-                            Go to Login
-                        </button>
-                        <p className="text-xs text-[var(--muted)]">
-                            Didn't receive email? Check your spam folder
-                        </p>
-                    </div>
+                    <button
+                        onClick={() => router.push('/login')}
+                        className="btn gradient-primary text-white font-semibold px-8 py-3 rounded-xl w-full"
+                    >
+                        Go to Login
+                    </button>
                 </div>
             </div>
         );
@@ -228,10 +221,6 @@ export default function RegisterPage() {
                         </Link>
                     </p>
                 </div>
-
-                <p className="mt-4 text-xs text-center text-[var(--muted)]">
-                    By signing up, you agree to our Terms of Service and Privacy Policy
-                </p>
             </div>
         </div>
     );
