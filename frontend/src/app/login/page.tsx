@@ -17,7 +17,7 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         if (!email || !password) {
@@ -31,15 +31,14 @@ export default function LoginPage() {
             await login(email, password);
             showToast('Welcome back!', 'success');
 
-           let redirect = '/';
+            // ✅ Redirect safely using URL params
+            let redirect = '/';
+            if (typeof window !== 'undefined') {
+                const params = new URLSearchParams(window.location.search);
+                redirect = params.get('redirect') || '/';
+            }
 
-        if (typeof window !== 'undefined') {
-            const params = new URLSearchParams(window.location.search);
-            redirect = params.get('redirect') || '/';
-        }
-        
-        router.push(redirect);
-
+            router.push(redirect);
         } catch (error: any) {
             showToast(error.message || 'Login failed', 'error');
         } finally {
@@ -59,6 +58,7 @@ export default function LoginPage() {
             {/* Form Card */}
             <div className="flex-1 -mt-8 bg-[var(--background)] rounded-t-3xl p-6">
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* Email */}
                     <div>
                         <label className="block text-sm font-medium mb-2">Email</label>
                         <div className="relative">
@@ -75,6 +75,7 @@ export default function LoginPage() {
                         </div>
                     </div>
 
+                    {/* Password */}
                     <div>
                         <label className="block text-sm font-medium mb-2">Password</label>
                         <div className="relative">
@@ -124,7 +125,6 @@ export default function LoginPage() {
                     </p>
                 </div>
 
-                {/* Demo credentials */}
                 <div className="mt-8 p-4 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl">
                     <p className="text-xs text-[var(--muted)] text-center">
                         Demo: Create a new account to get started
