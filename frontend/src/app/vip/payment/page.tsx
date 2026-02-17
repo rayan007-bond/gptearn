@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ui/Toast';
 import {
@@ -17,21 +17,19 @@ interface VIPPlan {
     earning_bonus: number;
 }
 
-// Payment wallet addresses - configure these in admin
 const WALLET_ADDRESSES = {
     usdt_trc20: 'TYourTRC20WalletAddressHere1234567890',
-    binance_pay: '123456789', // Binance ID
+    binance_pay: '123456789',
     jazzcash: '03001234567',
     easypaisa: '03001234567',
 };
 
 export default function VIPPaymentPage() {
     const router = useRouter();
-    const searchParams = useSearchParams();
     const { token, isLoading: authLoading, isAuthenticated } = useAuth();
     const { showToast } = useToast();
 
-    const planId = searchParams.get('plan');
+    const [planId, setPlanId] = useState<string | null>(null);
     const [plan, setPlan] = useState<VIPPlan | null>(null);
     const [paymentMethod, setPaymentMethod] = useState('usdt_trc20');
     const [screenshot, setScreenshot] = useState<File | null>(null);
@@ -41,16 +39,21 @@ export default function VIPPaymentPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [copied, setCopied] = useState(false);
 
+    // Only read query params on client
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            setPlanId(params.get('plan'));
+        }
+    }, []);
+
     useEffect(() => {
         if (!authLoading && !isAuthenticated) {
             router.push('/login?redirect=/vip');
             return;
         }
 
-        if (!planId) {
-            router.push('/vip');
-            return;
-        }
+        if (!planId) return; // wait until planId is set
 
         loadPlan();
     }, [authLoading, isAuthenticated, planId, router]);
@@ -93,9 +96,7 @@ export default function VIPPaymentPage() {
             setScreenshot(file);
 
             const reader = new FileReader();
-            reader.onload = (e) => {
-                setScreenshotPreview(e.target?.result as string);
-            };
+            reader.onload = (e) => setScreenshotPreview(e.target?.result as string);
             reader.readAsDataURL(file);
         }
     };
@@ -111,7 +112,6 @@ export default function VIPPaymentPage() {
         setIsSubmitting(true);
 
         try {
-            // Create form data for file upload
             const formData = new FormData();
             formData.append('planId', planId!);
             formData.append('paymentMethod', paymentMethod);
@@ -120,17 +120,13 @@ export default function VIPPaymentPage() {
 
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/vip/subscribe`, {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
+                headers: { Authorization: `Bearer ${token}` },
                 body: formData,
             });
 
             const data = await response.json();
 
-            if (!response.ok) {
-                throw new Error(data.error || 'Subscription request failed');
-            }
+            if (!response.ok) throw new Error(data.error || 'Subscription request failed');
 
             showToast('Payment submitted! Awaiting approval.', 'success');
             router.push('/vip/pending');
@@ -141,14 +137,7 @@ export default function VIPPaymentPage() {
         }
     };
 
-    const paymentMethods = [
-        { id: 'usdt_trc20', name: 'USDT (TRC20)', icon: '💎' },
-        { id: 'binance_pay', name: 'Binance Pay', icon: '🔶' },
-        { id: 'jazzcash', name: 'JazzCash', icon: '📱' },
-        { id: 'easypaisa', name: 'Easypaisa', icon: '💚' },
-    ];
-
-    if (isLoading || authLoading) {
+    if (isLoading || authLoading || !planId) {
         return (
             <div className="mobile-container flex items-center justify-center min-h-screen">
                 <div className="animate-spin w-8 h-8 border-2 border-[var(--primary)] border-t-transparent rounded-full" />
@@ -185,17 +174,13 @@ export default function VIPPaymentPage() {
                 <section>
                     <h3 className="font-semibold mb-3">Select Payment Method</h3>
                     <div className="grid grid-cols-2 gap-2">
-                        {paymentMethods.map((method) => (
+                        {['usdt_trc20', 'binance_pay', 'jazzcash', 'easypaisa'].map((method) => (
                             <button
-                                key={method.id}
-                                onClick={() => setPaymentMethod(method.id)}
-                                className={`card flex items-center gap-2 transition-all ${paymentMethod === method.id
-                                        ? 'border-[var(--primary)] bg-[var(--primary)]/5'
-                                        : ''
-                                    }`}
+                                key={method}
+                                onClick={() => setPaymentMethod(method)}
+                                className={`card flex items-center gap-2 transition-all ${paymentMethod === method ? 'border-[var(--primary)] bg-[var(--primary)]/5' : ''}`}
                             >
-                                <span className="text-xl">{method.icon}</span>
-                                <span className="font-medium text-sm">{method.name}</span>
+                                {method.toUpperCase()}
                             </button>
                         ))}
                     </div>
@@ -220,20 +205,8 @@ export default function VIPPaymentPage() {
                     </p>
                 </section>
 
-                {/* Warning */}
-                <div className="flex gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                    <AlertCircle size={20} className="text-amber-500 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm">
-                        <p className="font-medium text-amber-600">Important</p>
-                        <p className="text-[var(--muted)]">
-                            After payment, upload screenshot below. Your VIP will be activated within 2 hours after admin approval.
-                        </p>
-                    </div>
-                </div>
-
                 {/* Payment Form */}
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Transaction ID (optional) */}
                     <div>
                         <label className="block text-sm font-medium mb-2">
                             Transaction ID <span className="text-[var(--muted)]">(optional)</span>
@@ -247,15 +220,11 @@ export default function VIPPaymentPage() {
                         />
                     </div>
 
-                    {/* Screenshot Upload */}
                     <div>
                         <label className="block text-sm font-medium mb-2">
                             Payment Screenshot <span className="text-red-500">*</span>
                         </label>
-                        <div
-                            className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${screenshot ? 'border-[var(--success)] bg-[var(--success)]/5' : 'border-[var(--card-border)]'
-                                }`}
-                        >
+                        <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${screenshot ? 'border-[var(--success)] bg-[var(--success)]/5' : 'border-[var(--card-border)]'}`}>
                             {screenshotPreview ? (
                                 <div className="space-y-3">
                                     <img
@@ -287,7 +256,6 @@ export default function VIPPaymentPage() {
                         </div>
                     </div>
 
-                    {/* Submit Button */}
                     <button
                         type="submit"
                         disabled={isSubmitting || !screenshot}
@@ -307,3 +275,4 @@ export default function VIPPaymentPage() {
         </div>
     );
 }
+
